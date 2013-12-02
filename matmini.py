@@ -9,7 +9,7 @@ import re, sys, os.path
 from itertools import permutations
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 alphabet = set(alphabet + alphabet.upper())
-symbols = {"'",'.','=',',','/','+','*','(',')',';','[',']','-',':','@'}
+symbols = {"'",'.','=',',','/','+','*','^','(',')',';','[',']','-',':','@','\\','{','}'}
 keywords = {'break','case','catch','classdef','continue','else','elseif',
         'end','for','function','global','if','otherwise','parfor',
         'persistent','return','spmd','switch','try','while'}
@@ -22,13 +22,9 @@ def extract_strings(code_lines):
         matches = re.findall(r"'(.*?)'", line)
         for match in matches:
             # try determine if each match really is a string
-            if all((m in symbols) for m in match):
-                # just a bunch of symbols
+            if all((m in symbols) for m in match) or match[0] in {' ',','}:
+                # either just a bunch of symbols or probably is transpose
                 continue
-            bp = re.findall(r"\((.*?)\)", match)
-            if len(match.strip()) - sum(len(i) for i in bp) < 2:
-                continue
-            # uh I think it's too short?
             strings.append(match)
             code_lines[i] = code_lines[i].replace(match,"'%d'"%(len(strings)-1))
     print "Found strings: ", strings
@@ -53,9 +49,9 @@ def cleanup(code_lines):
         in_parens = 0
         prev = 0
         for i, s in enumerate(l):
-            if s == '(':
+            if s in {'[','('}:
                 in_parens += 1
-            elif s == ')':
+            elif s in {')',']'}:
                 in_parens -= 1
             elif (s == ',' and in_parens == 0) or s == ';':
                 # split line here
@@ -94,7 +90,8 @@ def find_names(code_lines):
                     left = ' '.join([left[:left.find('(')],
                         left[left.rfind(')')+1:]])
                 names.update(set(symbols_to_spaces(left).split()))
-    return {n for n in names if not n.isdigit()}
+    names = {n for n in names if not n.isdigit()}.difference(keywords)
+    return names
 
 def map_names(names, valid_chars, length = 1):
     # map variables names to their minified versions
@@ -104,18 +101,20 @@ def map_names(names, valid_chars, length = 1):
     perms = permutations(valid_chars, p)
     for n in names:
         tries = 0
-        while not m or m in names or not m[0] in alphabet or m in keywords:
+        while (not m) or (m in names) or (m in mapping.values()) or (
+                not m[0] in alphabet) or (m in keywords):
             if tries >= 2:
                 perms = permutations(alphabet, 1)
                 print "Not enough valid characters, continuing with default."
             try:
-                m = next(perms)
+                m = ''.join(next(perms))
             except StopIteration:
                 tries += 1
                 p += 1
                 perms = permutations(valid_chars, p)
-        mapping[n] = ''.join(m)
+        mapping[n] = m
         m = not m
+    print "Variable mapping:", mapping
     return mapping
 
 def find_name(name, line):
@@ -142,7 +141,7 @@ def find_name(name, line):
 
 def minify_join(lines):
     # make everything one line
-    return '\n'.join(lines)
+    #return '\n'.join(lines)
     m = [l + ',' if l[-1] != ';' else l for l in lines]
     for i in range(1, len(m)):
         if m[i].startswith('function'):
@@ -170,7 +169,7 @@ def minify(lines, valid_chars, length = 1):
 def minify_file(filename, valid_chars, length):
     with open(filename) as f:
         m = minify(f.readlines(), valid_chars, length)
-        out = m[m.find('function')+9:m.find('\n')].strip() + '.m'
+        out = m[m.find('function')+9:m.find(',')].strip() + '.m'
         with open(out, 'w') as o:
             o.write(m)
             print "Written to",out
@@ -187,7 +186,8 @@ def main():
     length = int(length) if length.isdigit() else 1
     # set valid_chars
     if '--alpha' in sys.argv[1:]:
-        valid_chars = set(sys.argv[sys.argv.index('--alpha')+1])
+        valid_chars = [c for c in sys.argv[sys.argv.index('--alpha')+1]]
+        #valid_chars = list(set(sys.argv[sys.argv.index('--alpha')+1]))
     for arg in sys.argv[1:]:
         if os.path.isfile(arg):
             minify_file(arg, valid_chars, length)
