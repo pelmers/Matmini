@@ -182,7 +182,7 @@ def main():
         return
     # set the length
     arg = ''.join(sys.argv[1:])
-    length = arg[arg.find('-l')+2]
+    length = arg[arg.find('-l')+2:].split()[0]
     length = int(length) if length.isdigit() else 1
     # set valid_chars
     if '--alpha' in sys.argv[1:]:
