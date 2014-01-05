@@ -9,7 +9,7 @@ import re, sys, os.path
 from itertools import permutations
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
 alphabet = set(alphabet + alphabet.upper())
-symbols = {"'",'.','=',',','/','+','*','^','(',')',';','[',']','-',':','@','\\','{','}'}
+symbols = {"'",'~','.','=',',','/','+','*','^','(',')',';','[',']','-',':','@','\\','{','}'}
 keywords = {'break','case','catch','classdef','continue','else','elseif',
         'end','for','function','global','if','otherwise','parfor',
         'persistent','return','spmd','switch','try','while'}
