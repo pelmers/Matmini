@@ -8,7 +8,7 @@ Minify Matlab code
 import re, sys, os.path, os
 from itertools import permutations
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
-alphabet = set(alphabet + alphabet.upper())
+alphabet = alphabet + alphabet.upper()
 symbols = {"'",'~','.','=',',','/','+','*','^','(',')',';','[',']','-',':','@','\\','{','}'}
 keywords = {'break','case','catch','classdef','continue','else','elseif',
         'end','for','function','global','if','otherwise','parfor',
@@ -250,12 +250,14 @@ def main(argv):
         print("Stages: decomment, rename_vars, oneline")
         return
     # set the length
-    arg = ''.join(argv[1:])
-    length = arg[arg.find('-l')+2:].split()[0]
+    length = 1
+    if '-l' in argv[1:]:
+        length = argv[argv.index('-l')+1]
     length = int(length) if length.isdigit() else 1
+    print("Using target variable length:", length)
     # set valid_chars
     if '--alpha' in argv[1:]:
-        valid_chars = [c for c in argv[argv.index('--alpha')+1]]
+        valid_chars = argv[argv.index('--alpha')+1]*4
     if '--skip' in argv[1:]:
         skipped_stages = set(argv[argv.index('--skip')+1].split(','))
         stages = stages.difference(skipped_stages)
